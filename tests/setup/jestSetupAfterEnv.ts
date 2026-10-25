@@ -1,16 +1,20 @@
 import { Test, TestingModuleBuilder, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createPool, DatabasePool } from 'slonik';
 import * as request from 'supertest';
 import { postgresConnectionUri } from '@src/configs/database.config';
 import { ValidationPipe } from '@nestjs/common';
+import {
+  applyHttpCompatibility,
+  createHttpAdapter,
+} from '@src/libs/api/http-compat';
 
 // Setting up test server and utilities
 
 export class TestServer {
   constructor(
-    public readonly serverApplication: NestExpressApplication,
+    public readonly serverApplication: NestFastifyApplication,
     public readonly testingModule: TestingModule,
   ) {}
 
@@ -19,7 +23,12 @@ export class TestServer {
   ): Promise<TestServer> {
     const testingModule: TestingModule = await testingModuleBuilder.compile();
 
-    const app: NestExpressApplication = testingModule.createNestApplication();
+    const app: NestFastifyApplication =
+      testingModule.createNestApplication<NestFastifyApplication>(
+        createHttpAdapter(),
+        { bodyParser: false },
+      );
+    applyHttpCompatibility(app);
 
     app.useGlobalPipes(
       new ValidationPipe({ transform: true, whitelist: true }),
@@ -28,6 +37,7 @@ export class TestServer {
     app.enableShutdownHooks();
 
     await app.init();
+    await app.getHttpAdapter().getInstance().ready();
 
     return new TestServer(app, testingModule);
   }

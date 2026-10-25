@@ -10,7 +10,7 @@ import { ContextInterceptor } from './libs/application/context/ContextIntercepto
 import { ExceptionInterceptor } from '@libs/application/interceptors/exception.interceptor';
 import { postgresConnectionUri } from './configs/database.config';
 import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { MercuriusDriver, MercuriusDriverConfig } from '@nestjs/mercurius';
 
 const interceptors = [
   {
@@ -31,9 +31,14 @@ const interceptors = [
       connectionUri: postgresConnectionUri,
     }),
     CqrsModule,
-    GraphQLModule.forRoot<ApolloDriverConfig>({
-      driver: ApolloDriver,
+    GraphQLModule.forRoot<MercuriusDriverConfig>({
+      driver: MercuriusDriver,
       autoSchemaFile: true,
+      // The HTTP endpoint is served by libs/api/graphql/graphql-http.ts
+      routes: false,
+      graphiql: false,
+      // Errors are formatted by the HTTP layer, which needs their causes.
+      errorFormatter: (execution) => ({ statusCode: 200, response: execution }),
     }),
 
     // Modules
